@@ -73,3 +73,5 @@ function notify(type: INotificationType, message: string) {
 
 notify("Email", "Dear");
 notify("Whatsapp", "Hey there!");
+
+export{}
