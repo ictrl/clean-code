@@ -1,77 +1,100 @@
-// We are bulding Notification service, where we want to send notification like notificationService.send('Hello World');
-
-// We got 3 external providers. These simulate third-party SDKs.
-class EmailProvider {
-  sendEmail(content: string) {
-    console.log("Sending Email:", content);
+// We got 2 external providers. These simulate third-party SDKs.
+class BvnkProvider {
+  verify(wallet: string) {
+      if (wallet.length < 8 || !wallet.startsWith('BVNK')) {
+          throw new Error('status: null, wallet is invalid');
+      } else return true
   }
 }
 
-class SmsProvider {
-  sendSMS(content: string) {
-    console.log("Sending SMS:", content);
+class VisaProvider {
+  private readonly WALLET_MIN_LENGTH = 8;
+  crossCheck(wallet: string) {
+      if (wallet.length < this.WALLET_MIN_LENGTH || !wallet.startsWith('VISA')) {
+          throw ({
+              success: false,
+              code: 400,
+              message: 'Wallet Validation failed'
+          });
+      } else return {
+          success: true,
+          code: 200,
+          message: 'Wallet is valid'
+      }
   }
 }
 
-class WhatsappProvider {
-  sendWa(content: string) {
-    console.log("Sending Whatsapp:", content);
+// Our system expectation (contract)
+interface IWalletService {
+  validate(wallet: string): IResponse;
+}
+
+type IResponse = {
+  message: string;
+  success: boolean;
+}
+
+type IWalletType = "BVNK" | "VISA";
+
+//* We will use adapter to translate provider methods (verify(), crossCheck()) to validate() which our system understands
+class BvnkAdapter implements IWalletService {
+  constructor(private readonly provider: BvnkProvider) { }
+
+  validate(message: string): IResponse {
+      try {
+          const response = this.provider.verify(message);
+          return {
+              message: 'Wallet is verfied',
+              success: true
+          }
+      } catch (error) {
+          return {
+              message: 'Wallet is not verfied',
+              success: false
+          }
+      }
   }
 }
 
-// Our system expectation
-interface INotificationService {
-  send(message: string): void;
-}
+class VisaAdapter implements IWalletService {
+  constructor(private readonly provider: VisaProvider) { }
 
-// We will use adapter to translate provider methods (sendEmail, sendSms...) to send() which our system understands
-class EmailAdapter implements INotificationService {
-  constructor(private readonly provider: EmailProvider) {}
-
-  send(message: string): void {
-    this.provider.sendEmail(message);
+  validate(message: string): IResponse {
+      try {
+          const response = this.provider.crossCheck(message);
+          return {
+              message: response.message,
+              success: response.success
+          }
+      } catch (error) {
+          return {
+              message: error.message,
+              success: false
+          }
+      }
   }
 }
 
-class SmsAdapter implements INotificationService {
-  constructor(private readonly provider: SmsProvider) {}
 
-  send(message: string): void {
-    this.provider.sendSMS(message);
-  }
-}
-
-class WhatsappAdapter implements INotificationService {
-  constructor(private readonly provider: WhatsappProvider) {}
-
-  send(message: string): void {
-    this.provider.sendWa(message);
-  }
-}
-
-type INotificationType = "Email" | "Sms" | "Whatsapp";
-
-
-const notificationProviders: Record<INotificationType,() => INotificationService> = {
-  Email: () => new EmailAdapter(new EmailProvider()),
-  Sms: () => new SmsAdapter(new SmsProvider()),
-  Whatsapp: () => new SmsAdapter(new SmsProvider()),
+const notificationProviders: Record<IWalletType, () => IWalletService> = {
+  BVNK: () => new BvnkAdapter(new BvnkProvider()),
+  VISA: () => new VisaAdapter(new VisaProvider()),
 };
 
-class NotificationFactory {
-  static create(type: INotificationType): INotificationService {
-    const notificationProvider = notificationProviders[type];
-    return notificationProvider();
+class WalletFactory {
+  static create(type: IWalletType): IWalletService {
+      const notificationProvider = notificationProviders[type];
+      return notificationProvider();
   }
 }
 
-// client code
-function notify(type: INotificationType, message: string) {
-  const provider = NotificationFactory.create(type);
-  provider.send(message);
+class PaymentService {
+  static validateWallet(type: IWalletType, wallet: string) {
+      const provider = WalletFactory.create(type);
+      return provider.validate(wallet);
+  }
 }
 
-notify("Email", "Dear");
-notify("Whatsapp", "Hey there!");
+// client code using Payment Service
 
-export{}
+export { }
