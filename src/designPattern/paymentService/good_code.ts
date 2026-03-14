@@ -4,7 +4,7 @@
 
 //* mock
 
-class COINBASE {
+class CoinbaseProvider {
     private readonly MIN_WALLET_LENGTH = 8;
     validateWallet(wallet: string) {
         if (wallet.length < this.MIN_WALLET_LENGTH || !wallet.startsWith('CB_')) {
@@ -21,7 +21,7 @@ class COINBASE {
     }
 }
 
-class BVNK {
+class BvnkProvider {
     crossCheck(wallet: string) {
         if (wallet.length < 8) {
             return 'satus: NULL, msg: wrong wallet'
@@ -33,8 +33,8 @@ class BVNK {
     }
 }
 
-class COINBASE_ADAPTER implements IPaymentSevice {
-    constructor(readonly provider: COINBASE) {
+class CoinbaseAdapter implements IPaymentService {
+    constructor(readonly provider: CoinbaseProvider) {
         this.provider = provider
     }
     validateWallet(wallet: string): WalletResponse {
@@ -53,8 +53,8 @@ class COINBASE_ADAPTER implements IPaymentSevice {
 
 }
 
-class BVNK_ADAPTER implements IPaymentSevice {
-    constructor(private readonly provider: BVNK) { }
+class BvnkAdapter implements IPaymentService {
+    constructor(private readonly provider: BvnkProvider) { }
     validateWallet(wallet: string): WalletResponse {
         const response = this.provider.crossCheck(wallet);
         if (typeof response === 'string') {
@@ -83,28 +83,30 @@ type WalletResponse = {
     msg: string;
 }
 
-interface IPaymentSevice {
+interface IPaymentService {
     validateWallet(wallet: string): WalletResponse
 }
 
-const walletProvider: Record<WalletType, () => IPaymentSevice> = {
-    COINBASE: () => new COINBASE_ADAPTER(new COINBASE()),
-    BVNK: () => new BVNK_ADAPTER(new BVNK())
-}
-
 class WalletFactory {
-    static build(type: WalletType): IPaymentSevice {
-        const provider = walletProvider[type];
+    private readonly walletProvider: Record<WalletType, () => IPaymentService> = {
+        COINBASE: () => new CoinbaseAdapter(new CoinbaseProvider()),
+        BVNK: () => new BvnkAdapter(new BvnkProvider())
+    }
+
+    build(type: WalletType): IPaymentService {
+        const provider = this.walletProvider[type];
         return provider()
     }
 }
 
 class PaymentService {
     // ...
-    static validateWallet(data: WalletRequest): WalletResponse {
+    constructor(private readonly factory: WalletFactory) { }
+
+    validateWallet(data: WalletRequest): WalletResponse {
         const type = data.type;
         const wallet = data.wallet;
-        const provider = WalletFactory.build(type);
+        const provider = this.factory.build(type);
         return provider.validateWallet(wallet)
     }
 
@@ -113,8 +115,8 @@ class PaymentService {
 const type = 'COINBASE';
 const wallet = 'CB_15678';
 
-
-console.log(PaymentService.validateWallet({ type, wallet }));
+const paymentService = new PaymentService(new WalletFactory());
+console.log(paymentService.validateWallet({ type, wallet }));
 
 
 export { }
