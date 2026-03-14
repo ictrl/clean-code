@@ -101,7 +101,7 @@ class WalletFactory {
 
 class PaymentService {
     // ...
-    validateWallet(data: WalletRequest): WalletResponse {
+    static validateWallet(data: WalletRequest): WalletResponse {
         const type = data.type;
         const wallet = data.wallet;
         const provider = WalletFactory.build(type);
@@ -114,5 +114,7 @@ const type = 'COINBASE';
 const wallet = 'CB_15678';
 
 
-const paymentService = new PaymentService();
-console.log(paymentService.validateWallet({ type, wallet }));
+console.log(PaymentService.validateWallet({ type, wallet }));
+
+
+export { }
