@@ -103,3 +103,6 @@ const wallet = '12345678';
 
 const paymentService = new PaymentService();
 console.log(paymentService.validateWallet({ type, wallet }));
+
+
+export {}
