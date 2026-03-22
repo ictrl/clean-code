@@ -114,3 +114,5 @@ const walletService = new WalletService(factory);
 const isWalletValid = walletService.verify(wallet, type);
 console.log(isWalletValid);
 
+
+//todo need to learn strategy design pattern
